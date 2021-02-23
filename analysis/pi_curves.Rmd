@@ -367,7 +367,7 @@ finalT1$coefficients..Intercept. <- ifelse(finalT1$ID == 3 & finalT1$rad == "112
 
 finalT1$Date <- "2019-09-16"
 
-T1merger <- merge(finalT1, rfT1, by = c("ID","RunTime", "rad", "value"), all = TRUE)# merge best regression outputs back with raw sensor outputs
+T1merger <- merge(finalT1, rfT1, by = c("ID","RunTime", "rad", "value"), all = TRUE) # merge best regression outputs back with raw sensor outputs
 frag.graph(T1merger)
 
 ggplot(finalT1, aes(x = rad, color = ID)) +
