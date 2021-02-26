@@ -8,6 +8,16 @@ Ocean warming is causing global coral bleaching events to increase in frequency,
 
 **Repository contents:**
 
-**data/:**
+**data/:** Contains environmental and field collection data, physiology measurements and acidosis experiment measurements. 
+* raw phys data/: raw measurements for all physiology variables
+* pHi: acidosis experiment measurements
+* benthos: visual bleaching response
+* temp: temperature data obtained from NOAA sensor on Moku o loe and DHW/BI summaries
+* PhysData.csv: physiology measurement summary file
 
 **analysis/:**
+* pHi_analysis_2019KBay.Rmd: acidosis experiment analysis
+* pi_curves.Rmd: generating PI curves from PreSens output
+* DHW_BI.Rmd: calculations for reef-wide bleaching index and DHW
+* mixedmodels.Rmd: statistical analysis for physiology measurements
+* pi_models.Rmd: PI curve model analysis
