@@ -2,6 +2,7 @@
 # Luella Allen-Waller
 # for Innis et al. "Marine heatwaves depress metabolic activity..."
 
+library(plyr)
 library(dplyr)
 library(ggpmisc)
 library(ggplot2)
@@ -17,21 +18,17 @@ library(lme4)
 library(lmerTest)
 
 # Check out the timecourse data frame and format
-O_frame <- read_csv("Oct19_pHi_timecourse.csv") %>% na.omit()
+O_frame <- read_csv("Oct2019_pHi_timecourse.csv")
 O_frame$timepoint <- as.numeric(O_frame$timepoint)
 head(O_frame)
 
 # read in acidification magnitude and pHi recovery rate data
-pH_rates <- read.csv("Oct19_pHi_summary.csv")
+pH_rates <- read.csv("Oct2019_pHi_summary.csv")
 pH_rates$celltype <- as.factor(pH_rates$celltype)
 pH_rates$hist <- as.factor(pH_rates$hist)
-pH_rates$celltype = factor(pH_rates$celltype,levels(pH_rates$celltype)[c(2,1)]) %>%
-  revalue(c("nonsymb"="Nonsymbiocytes", "symbiocyte" = "Symbiocytes"))
-pH_rates$hist = factor(pH_rates$hist,levels(pH_rates$hist)[c(2,1)]) %>%
-  revalue(c("B" = "Bleached", "NB" = "Nonbleached"))
 
-symb_frame <- subset(O_frame, celltype == "symbiocytes")
-nonsymb_frame <- subset(O_frame, celltype == "nonsymbiocytes")
+symb_frame <- subset(O_frame, celltype == "Symbiocytes")
+nonsymb_frame <- subset(O_frame, celltype == "Nonsymbiocytes")
 
 ####################################################################################
 
@@ -62,81 +59,115 @@ pHnonsymbiocytes <- ggplot(nonsymb_frame, aes(x = timepoint - 2, y = pH, color =
   coord_cartesian(ylim = c(7.0,8.1))
 pHnonsymbiocytes
 
-# setpoint pH (basal) boxplot
+###### Boxplots
+
+# set position dodge for plotting
+pd = position_dodge(width = 0.9)
+
+## October (peak bleaching)
+# Setpoint pH (basal) boxplot
 basal_frame <- filter(O_frame, timepoint < 5)
-basal_frame$history <- as.factor(basal_frame$history)
-basal_frame$celltype <- factor(basal_frame$celltype, levels = basal_frame$celltype[c(2,1)]) %>%
-  revalue(c("nonsymbiocytes"="Nonsymbiocytes", "symbiocytes" = "Symbiocytes"))
-basal_frame$history <- factor(basal_frame$history, levels = c("Nonbleached", "Bleached"))
-pHBasal <- ggplot(basal_frame, aes(x = celltype, y = pH, color = history,
-                                   group = interaction(celltype, history))) +
-  geom_boxplot(size = 0.7) +
+basal_frame$celltype2 <- factor(basal_frame$celltype, levels = c("Symbiocytes","Non-symbiocytes"))
+
+Oct.Basal <- ggplot(data=basal_frame,aes(factor(celltype2), pH, group = interaction(celltype2,history))) +
+  geom_boxplot(aes(fill = history), position = pd,  
+               color = "black", width = 0.7) + 
+  stat_boxplot(geom = 'errorbar', position = pd, width = 0.3) +
   ylab(expression(paste("Basal pH"[i]))) + 
   xlab("") + 
-  scale_color_manual(values = c("Nonbleached" = "black", "Bleached" = "gray")) +
+  scale_fill_manual(values = c("Resistant" = "#333333", "Susceptible" = "gray")) +
   theme_bw() + 
-  theme(panel.grid = element_blank(), legend.position = "none", text = element_text(size=14))
-pHBasal
-
-# acidification boxplot
-pHAcidification <- ggplot(pH_rates, aes(x = celltype, y = acid_mag, color = hist,
-                                        group = interaction(celltype, hist))) +
-  geom_boxplot(size = 0.7) +
+  theme(panel.grid = element_blank(), legend.title = element_blank(), 
+        legend.position = c(0.75,0.85),
+        text = element_text(size=18), 
+        axis.text=element_text(color="black")) +
+  coord_cartesian(ylim = c(6.8,8.6))
+Oct.Basal
+# Acidification boxplot
+pH_rates$celltype2 <- factor(pH_rates$celltype, levels = c("Symbiocytes","Non-symbiocytes"))
+Oct.Acid <- ggplot(data=pH_rates,aes(factor(celltype2), acid_mag, group = interaction(celltype2,hist))) +
+  geom_boxplot(aes(fill = hist), position = pd,  
+               color = "black", width = 0.7) + 
+  stat_boxplot(geom = 'errorbar', position = pd, width = 0.3) +
   ylab(expression(paste("Initial acidification ("* Delta*"pH"[i]*")"))) + 
-  xlab("") +
-  scale_color_manual(values = c("Nonbleached" = "black", "Bleached" = "gray")) +
-  theme_bw()  + 
-  theme(panel.grid = element_blank(), legend.position = "none", text = element_text(size = 14)) +
-  geom_hline(yintercept = 0, linetype = "dashed")
-pHAcidification
-
-# recovery rate boxplot
-pHRecovery <- ggplot(pH_rates, aes(x = celltype, y = recovery_rate, color = hist,
-                                   group = interaction(celltype, hist))) +
-  geom_boxplot(size = 0.7) +
-  ylab(expression(paste("pH"[i]*" recovery rate (pH min"^-1*")"))) + xlab("") +
-  scale_color_manual(values = c("Nonbleached" = "black", "Bleached" = "gray")) +
+  xlab("") + 
+  scale_fill_manual(values = c("Resistant" = "#333333", "Susceptible" = "gray")) +
   theme_bw() + 
-  theme(panel.grid = element_blank(), legend.position = "none", text = element_text(size = 14)) +
-  geom_hline(yintercept = 0, linetype = "dashed")
-pHRecovery
+  theme(panel.grid = element_blank(), legend.title = element_blank(), 
+        legend.position = "none",
+        text = element_text(size=18), 
+        axis.text=element_text(color="black")) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  coord_cartesian(ylim = c(-1,0.4))
+Oct.Acid
+# recovery rate boxplot
+Oct.Recov <- ggplot(data=pH_rates,aes(factor(celltype2), recovery_rate, group = interaction(celltype2,hist))) +
+  geom_boxplot(aes(fill = hist), position = pd,  
+               color = "black", width = 0.7) + 
+  stat_boxplot(geom = 'errorbar', position = pd, width = 0.3) +
+  ylab(expression(paste("pH"[i]*" recovery rate (pH min"^-1*")"))) + xlab("") +
+  xlab("") + 
+  scale_fill_manual(values = c("Resistant" = "#333333", "Susceptible" = "gray")) +
+  theme_bw() + 
+  theme(panel.grid = element_blank(), legend.title = element_blank(), 
+        legend.position = "none",
+        text = element_text(size=18), 
+        axis.text=element_text(color="black")) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  coord_cartesian(ylim = c(-0.015,0.015))
+Oct.Recov
 
-### July controls
+## July controls
 control_rates <- read.csv("Jul19control_pHi_summary.csv")
+control_rates$celltype2 <- factor(control_rates$celltype, levels = c("Symbiocytes","Non-symbiocytes"))
 
-# setpoint pH (basal) boxplot
-c_pHBasal <- ggplot(control_rates, aes(x = celltype, y = basal, color = hist,
-                                   group = interaction(celltype, hist))) +
-  geom_boxplot(size = 0.7) +
+# Control basal boxplot:
+July.Basal <- ggplot(data=control_rates,aes(factor(celltype2), basal, group = interaction(celltype2,hist))) +
+  geom_boxplot(aes(fill = hist), position = pd,  
+               color = "black", width = 0.7) + 
+  stat_boxplot(geom = 'errorbar', position = pd, width = 0.3) +
   ylab(expression(paste("Basal pH"[i]))) + 
   xlab("") + 
-  scale_color_manual(values = c("Resistant" = "black", "Susceptible" = "gray")) +
+  scale_fill_manual(values = c("Resistant" = "#333333", "Susceptible" = "gray")) +
   theme_bw() + 
-  theme(panel.grid = element_blank(), legend.position = "none", text = element_text(size=14))
-c_pHBasal
-
-# acidification boxplot
-c_pHAcidification <- ggplot(control_rates, aes(x = celltype, y = acid_mag, color = hist,
-                                        group = interaction(celltype, hist))) +
-  geom_boxplot(size = 0.7) +
+  theme(panel.grid = element_blank(), legend.title = element_blank(), 
+        legend.position = c(0.75,0.85),
+        text = element_text(size=18), 
+        axis.text=element_text(color="black")) +
+  coord_cartesian(ylim = c(6.8,8.6))
+July.Basal
+# Control acidification boxplot:
+July.Acid <- ggplot(data=control_rates,aes(factor(celltype2), acid_mag, group = interaction(celltype2,hist))) +
+  geom_boxplot(aes(fill = hist), position = pd,  
+               color = "black", width = 0.7) + 
+  stat_boxplot(geom = 'errorbar', position = pd, width = 0.3) +
   ylab(expression(paste("Initial acidification ("* Delta*"pH"[i]*")"))) + 
-  xlab("") +
-  scale_color_manual(values = c("Resistant" = "black", "Susceptible" = "gray")) +
-  theme_bw()  + 
-  theme(panel.grid = element_blank(), legend.position = "none", text = element_text(size = 14)) +
-  geom_hline(yintercept = 0, linetype = "dashed")
-c_pHAcidification
-
-# recovery rate boxplot
-c_pHRecovery <- ggplot(control_rates, aes(x = celltype, y = recovery_rate, color = hist,
-                                   group = interaction(celltype, hist))) +
-  geom_boxplot(size = 0.7) +
-  ylab(expression(paste("pH"[i]*" recovery rate (pH min"^-1*")"))) + xlab("") +
-  scale_color_manual(values = c("Resistant" = "black", "Susceptible" = "gray")) +
+  xlab("") + 
+  scale_fill_manual(values = c("Resistant" = "#333333", "Susceptible" = "gray")) +
   theme_bw() + 
-  theme(panel.grid = element_blank(), legend.position = "none", text = element_text(size = 14)) +
-  geom_hline(yintercept = 0, linetype = "dashed")
-c_pHRecovery
+  theme(panel.grid = element_blank(), legend.title = element_blank(), 
+        legend.position = "none",
+        text = element_text(size=18), 
+        axis.text=element_text(color="black")) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  coord_cartesian(ylim = c(-1,0.4))
+July.Acid
+# July recovery boxplot:
+July.Recov <- ggplot(data=control_rates,aes(factor(celltype2), recovery_rate, group = interaction(celltype2,hist))) +
+  geom_boxplot(aes(fill = hist), position = pd,  
+               color = "black", width = 0.7) + 
+  stat_boxplot(geom = 'errorbar', position = pd, width = 0.3) +
+  ylab(expression(paste("pH"[i]*" recovery rate (pH min"^-1*")"))) + xlab("") +
+  xlab("") + 
+  scale_fill_manual(values = c("Resistant" = "#333333", "Susceptible" = "gray")) +
+  theme_bw() + 
+  theme(panel.grid = element_blank(), legend.title = element_blank(), 
+        legend.position = "none",
+        text = element_text(size=18), 
+        axis.text=element_text(color="black")) +
+  geom_hline(yintercept = 0, linetype = "dashed")+
+  coord_cartesian(ylim = c(-0.015,0.015))
+July.Recov
 
 ####################################
 ### Stats 
@@ -175,7 +206,8 @@ kruskal.test(basal ~ hist, data = control_rates)
 kruskal.test(basal ~ celltype, data = control_rates)
 # No significant effect of celltype (X2 = 3.6402, df = 1, p-value = 0.0564)
 
-#### Linear mixed effects models on whole timecourses
+
+#### Linear mixed effects models
 # H/T Craig Nelson, Kristin Brown, and Teegan Innis for advice
 
 ### Peak bleaching (October 2019)
@@ -204,7 +236,7 @@ anova(pair.lmm.recovrate, type="III")
 ### Controls (July 2019)
 shapiro.test(control_rates$basal)
 qqnorm(control_rates$basal)
-# p = 0.013 - data are non-normal...slightly
+# p = 0.013 - data are slightly non-normal
 # for basal pHi:
 c.lmm.basal <- lmer(basal ~ celltype * hist + (1|pair), data = control_rates)
 anova(c.lmm.basal, type="III")
